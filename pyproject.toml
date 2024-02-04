@@ -1,3 +1,18 @@
+[project]
+name = "jaxproxqp"
+authors = [
+    {name = "Oswin So", email = "oswinso@gmail.com"},
+]
+dependencies = [
+    "jax",
+    "jaxtyping",
+    "loguru",
+    "attrs",
+    "equinox",
+    "flax"
+]
+dynamic = ["version"]
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
