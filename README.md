@@ -101,4 +101,4 @@ Also consider citing the [ProxQP](https://www.roboticsproceedings.org/rss18/p040
 This codebase has been used in the following projects:
 - So et al., “How to train your neural control barrier function: Learning
 safety filters for complex input-constrained systems,” [website](https://mit-realm.github.io/pncbf/) | [paper](https://arxiv.org/abs/2310.15478) 
-- Zhang et al., "GCBF+: A Neural Graph Control Barrier Function Framework for Distributed Safe Multi-Agent Control," [website](https://mit-realm.github.io/gcbfplus-website)
+- Zhang et al., "GCBF+: A Neural Graph Control Barrier Function Framework for Distributed Safe Multi-Agent Control," [website](https://mit-realm.github.io/gcbfplus-website) | [paper](https://arxiv.org/abs/2401.14554)
