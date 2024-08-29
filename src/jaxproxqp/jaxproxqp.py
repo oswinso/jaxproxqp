@@ -411,6 +411,7 @@ class JaxProxQP:
             inner_iters, res, sol, active_info_new = self.primal_dual_newton_semi_smooth(
                 res, sol, sol_prev, mults, bcl_coeffs.bcl_eta_in
             )
+
             iter_info = iter_info._replace(iter_inner=iter_info.iter_inner + inner_iters)
             # jd.print("    x: {}", sol.x, ordered=True)
             # jd.print("    y: {}", sol.y, ordered=True)
@@ -422,6 +423,7 @@ class JaxProxQP:
 
             # BCL update. We may rollback the y and z of sol if it was a bad update.
             sol, bcl_coeffs_new = self.bcl_update(pri_res_new.lhs, sol, sol_prev, bcl_coeffs, mults)
+
 
             # Compute dual residuals. We don't need to check primal residuals, since x didn't change.
             dua_res_new, dua_res_work_new = self.global_dual_residual(sol, active_info_new)
@@ -850,17 +852,23 @@ class JaxProxQP:
         def body_fun(state: tuple[int, LineSearchAlphaCarry]):
             i, (alpha_last_neg_, last_neg_grad_, alpha_first_pos_, first_pos_grad_) = state
             alpha = a_alphas_sorted[i]
+            is_alpha_valid = jnp.isfinite(alpha)
+
             gpdal_res = gpdal_derivative_results(alpha)
             gr = gpdal_res.grad
             # jd.print("    i={}    gr={}, a={}, b={}, alp={}", i, gr, gpdal_res.a, gpdal_res.b, alpha, ordered=True)
             is_neg = gr < 0
-            # Update if negative.
-            alpha_last_neg_ = jnp.where(is_neg, alpha, alpha_last_neg_)
-            last_neg_grad_ = jnp.where(is_neg, gr, last_neg_grad_)
+            is_pos = ~is_neg
 
-            # Update if positive => Keep old value if negative.
-            alpha_first_pos_ = jnp.where(is_neg, alpha_first_pos_, alpha)
-            first_pos_grad_ = jnp.where(is_neg, first_pos_grad_, gr)
+            # Update if negative and alpha is valid.
+            alpha_last_neg_ = jnp.where(is_neg & is_alpha_valid, alpha, alpha_last_neg_)
+            last_neg_grad_ = jnp.where(is_neg & is_alpha_valid, gr, last_neg_grad_)
+
+            # Update if positive and alpha is valid => Keep old value if negative.
+            # alpha_first_pos_ = jnp.where(is_neg, alpha_first_pos_, alpha)
+            # first_pos_grad_ = jnp.where(is_neg, first_pos_grad_, gr)
+            alpha_first_pos_ = jnp.where(is_pos & is_alpha_valid, alpha, alpha_first_pos_)
+            first_pos_grad_ = jnp.where(is_pos & is_alpha_valid, gr, first_pos_grad_)
 
             return i + 1, LineSearchAlphaCarry(alpha_last_neg_, last_neg_grad_, alpha_first_pos_, first_pos_grad_)
 
@@ -891,8 +899,10 @@ class JaxProxQP:
         alpha = jnp.abs(alpha)
 
         alpha = jnp.where(all_invalid, all_invalid_alpha, jnp.where(is_all_neg, all_neg_alpha, alpha))
-        # jd.print("alpha: {}", alpha, ordered=True)
-        # jd.breakpoint(ordered=True)
+
+        # If alpha is nan or inf, then to prevent it from spreading just set it to some tiny number.
+        alpha = jnp.where(~jnp.isfinite(alpha), 10 * machine_eps, alpha)
+
         return alpha
 
     def gpdal_derivative_results(
